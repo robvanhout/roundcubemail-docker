@@ -134,6 +134,12 @@ CMD ["apache2-foreground"]
 
 FROM root as nonroot
 
+# Install JQ
+RUN set -ex; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends \
+		jq;
+
 # Prepare locale config for locale-gen
 RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen; \
 	/usr/sbin/locale-gen

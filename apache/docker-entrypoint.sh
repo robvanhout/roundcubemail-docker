@@ -91,7 +91,28 @@ if  [[ "$1" == apache2* || "$1" == php-fpm || "$1" == bin* ]]; then
   : "${ROUNDCUBEMAIL_REQUEST_PATH:=/}"
   : "${ROUNDCUBEMAIL_COMPOSER_PLUGINS_FOLDER:=$INSTALLDIR}"
 
-  if [ ! -z "${ROUNDCUBEMAIL_COMPOSER_PLUGINS}" ]; then
+    if [ ! -z "${ROUNDCUBEMAIL_COMPOSER_REPOSITORIES}" ]; then
+      echo "Adding custom Composer repositories…"
+      # jq is available in the image; fallback to plain bash if you stripped it.
+      if command -v jq >/dev/null 2>&1; then
+        echo "${ROUNDCUBEMAIL_COMPOSER_REPOSITORIES}" \
+        | jq -c '.[]' \
+        | nl -ba -v0 -nln \
+        | while read -r idx repo_json; do
+            repo_type=$(echo "${repo_json}" | jq -r '.type')
+            repo_url=$( echo "${repo_json}" | jq -r '.url' )
+            echo "  • repositories.custom${idx}  (${repo_type}) ${repo_url}"
+            composer \
+              --working-dir=${ROUNDCUBEMAIL_COMPOSER_PLUGINS_FOLDER} \
+              config "repositories.custom${idx}" "${repo_type}" "${repo_url}"
+          done
+      else
+        echo "ERROR: jq not found — unable to parse ROUNDCUBEMAIL_COMPOSER_REPOSITORIES" >&2
+        exit 1
+      fi
+    fi
+
+    if [ ! -z "${ROUNDCUBEMAIL_COMPOSER_PLUGINS}" ]; then
     echo "Installing plugins from the list"
     echo "Plugins: ${ROUNDCUBEMAIL_COMPOSER_PLUGINS}"
 
